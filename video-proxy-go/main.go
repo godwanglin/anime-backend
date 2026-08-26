@@ -343,6 +343,11 @@ func proxyURL(proxyBase string, target string) string {
 }
 
 func baseProxyURL(r *http.Request) string {
+	host := r.Header.Get("X-Forwarded-Host")
+	if host == "" {
+		host = r.Host
+	}
+
 	scheme := r.Header.Get("X-Forwarded-Proto")
 	if scheme == "" {
 		scheme = "http"
@@ -351,9 +356,12 @@ func baseProxyURL(r *http.Request) string {
 		}
 	}
 
-	host := r.Header.Get("X-Forwarded-Host")
-	if host == "" {
-		host = r.Host
+	cleanHost := strings.ToLower(host)
+	isLocal := strings.HasPrefix(cleanHost, "localhost") ||
+		strings.HasPrefix(cleanHost, "127.0.0.1") ||
+		strings.HasPrefix(cleanHost, "[::1]")
+	if !isLocal {
+		scheme = "https"
 	}
 
 	return scheme + "://" + host + r.URL.Path

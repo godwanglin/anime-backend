@@ -152,6 +152,7 @@ func extractMediaInfo(previewURL string) (int64, float64, bool) {
 }
 
 func ydwnBaseURL(r *http.Request) string {
+	host := firstNonEmpty(r.Header.Get("X-Forwarded-Host"), r.Host)
 	scheme := r.Header.Get("X-Forwarded-Proto")
 	if scheme == "" {
 		scheme = "http"
@@ -159,7 +160,15 @@ func ydwnBaseURL(r *http.Request) string {
 			scheme = "https"
 		}
 	}
-	host := firstNonEmpty(r.Header.Get("X-Forwarded-Host"), r.Host)
+
+	cleanHost := strings.ToLower(host)
+	isLocal := strings.HasPrefix(cleanHost, "localhost") ||
+		strings.HasPrefix(cleanHost, "127.0.0.1") ||
+		strings.HasPrefix(cleanHost, "[::1]")
+	if !isLocal {
+		scheme = "https"
+	}
+
 	return fmt.Sprintf("%s://%s%s", scheme, host, ydwnBasePath)
 }
 

@@ -12,6 +12,13 @@ import { orderHlsVariantsForFastStart } from "./hls-optimizer";
 const BASE_PREFIX_SERVER_PATH = "/api/video-stream/ac-stream";
 const ANICHIN_BASE = "https://anichin.stream";
 
+function sanitizePlaylistProtocol(playlistText: string) {
+  return playlistText.replace(
+    /http:\/\/([a-zA-Z0-9.-]+\.weebinhub\.com|[a-zA-Z0-9.-]+\.weebin\.site)/g,
+    "https://$1",
+  );
+}
+
 // ─── Encode/Decode token ──────────────────────────────────────────────────────
 
 function encodeToken(url: string): string {
@@ -118,7 +125,7 @@ export const proxyRoutes: FastifyPluginAsync = async (app) => {
           .header("Access-Control-Allow-Origin", "*")
           .header("Cache-Control", VIDEO_PLAYLIST_CACHE_CONTROL)
           .header("X-Video-Playlist-Cache", "hit")
-          .send(cached);
+          .send(sanitizePlaylistProtocol(cached));
       }
 
       const upstream = await fetch(upstreamUrl, {
@@ -138,7 +145,9 @@ export const proxyRoutes: FastifyPluginAsync = async (app) => {
 
       const text = await upstream.text();
 
-      const rewritten = rewriteM3u8(text, baseUrl, upstreamUrl);
+      const rewritten = sanitizePlaylistProtocol(
+        rewriteM3u8(text, baseUrl, upstreamUrl),
+      );
       await writeVideoPlaylistCache("ac:master", cacheParts, rewritten);
 
       return reply
@@ -218,9 +227,11 @@ export const proxyRoutes: FastifyPluginAsync = async (app) => {
           .header("Access-Control-Allow-Origin", "*")
           .header("Cache-Control", VIDEO_PLAYLIST_CACHE_CONTROL)
           .header("X-Video-Playlist-Cache", "hit")
-          .send(cached);
+          .send(sanitizePlaylistProtocol(cached));
       }
-      const rewritten = rewriteM3u8(bodyText, baseUrl, targetUrl);
+      const rewritten = sanitizePlaylistProtocol(
+        rewriteM3u8(bodyText, baseUrl, targetUrl),
+      );
       await writeVideoPlaylistCache("ac:segment", cacheParts, rewritten);
 
       return reply

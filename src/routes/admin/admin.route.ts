@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { Prisma, type NotificationCategory } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
+import { toImagePath } from "../../utils/image-path";
 import {
   getCachedConfigs,
   invalidateConfigCache,
@@ -215,8 +216,12 @@ function cleanAnimeData(body: AnimeBody) {
   return {
     ...(body.slug ? { slug: body.slug.trim() } : {}),
     ...(body.title ? { title: body.title.trim() } : {}),
-    ...(body.thumbnail !== undefined ? { thumbnail: body.thumbnail } : {}),
-    ...(body.bigCover !== undefined ? { bigCover: body.bigCover } : {}),
+    ...(body.thumbnail !== undefined
+      ? { thumbnail: toImagePath(body.thumbnail) }
+      : {}),
+    ...(body.bigCover !== undefined
+      ? { bigCover: toImagePath(body.bigCover) }
+      : {}),
     ...(body.synopsis !== undefined ? { synopsis: body.synopsis } : {}),
     ...(body.status !== undefined ? { status: body.status } : {}),
     ...(body.type !== undefined ? { type: body.type } : {}),
@@ -1307,7 +1312,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const data: Prisma.UserUpdateInput = {
       ...(body.role ? { role: body.role } : {}),
       ...(body.username ? { username: body.username } : {}),
-      ...(body.avatar !== undefined ? { avatar: body.avatar } : {}),
+      ...(body.avatar !== undefined ? { avatar: toImagePath(body.avatar) } : {}),
       ...(body.isVerified !== undefined
         ? { isVerified: Boolean(body.isVerified) }
         : {}),

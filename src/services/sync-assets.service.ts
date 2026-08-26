@@ -2,8 +2,10 @@ import crypto from "crypto";
 import { prisma } from "../lib/prisma";
 import { CacheInvalidator } from "../lib/cache";
 import { getR2PublicUrl, r2ObjectExists, uploadBufferToR2 } from "../utils/r2";
+import { toImagePath } from "../utils/image-path";
 
-const CDN_PREFIX = "https://cdn-static.weebin.site";
+const CDN_PREFIX = "https://cdn-static.weebinhub.com";
+const CDN_HOSTS = new Set(["cdn-static.weebinhub.com", "cdn-static.weebin.site"]);
 const MAX_ASSETS = 100;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const PROCESSED_TTL_MS = 24 * 60 * 60 * 1000;
@@ -44,6 +46,7 @@ type DecodedAsset = {
   ext: string;
   key: string;
   cdnUrl: string;
+  isCdnAsset: boolean;
 };
 
 type PreparedAsset = DecodedAsset & {
@@ -61,7 +64,11 @@ function decodeHex(value: string) {
 }
 
 function isCdnUrl(url: string) {
-  return url.trim().startsWith(CDN_PREFIX);
+  try {
+    return CDN_HOSTS.has(new URL(url.trim()).hostname);
+  } catch {
+    return url.trim().startsWith(CDN_PREFIX);
+  }
 }
 
 function sourceHash(url: string) {
@@ -95,26 +102,31 @@ function parseAsset(raw: SyncAssetInput): DecodedAsset | null {
   const id = Number(raw.id);
   if (!Number.isInteger(id) || id <= 0) return null;
 
-  const field = raw.context === "episode" ? "thumbnail" : (raw.field ?? "thumbnail");
+  const field =
+    raw.context === "episode" ? "thumbnail" : (raw.field ?? "thumbnail");
   if (!ALLOWED_ANIME_FIELDS.has(field)) return null;
 
   const url = decodeHex(raw.url).trim();
-  if (!url || isCdnUrl(url)) return null;
+  if (!url) return null;
 
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+      return null;
 
     const normalizedUrl = parsed.href;
+    const isCdnAsset = isCdnUrl(normalizedUrl);
     const hash = sourceHash(normalizedUrl);
     const ext = extFromUrl(normalizedUrl);
-    const key = r2ImageKey({
-      context: raw.context,
-      id,
-      field,
-      sourceHash: hash,
-      ext,
-    });
+    const key = isCdnAsset
+      ? parsed.pathname.replace(/^\/+/, "")
+      : r2ImageKey({
+          context: raw.context,
+          id,
+          field,
+          sourceHash: hash,
+          ext,
+        });
 
     return {
       url: normalizedUrl,
@@ -125,6 +137,7 @@ function parseAsset(raw: SyncAssetInput): DecodedAsset | null {
       ext,
       key,
       cdnUrl: getR2PublicUrl(key),
+      isCdnAsset,
     };
   } catch {
     return null;
@@ -184,6 +197,13 @@ async function prepareAsset(
   asset: DecodedAsset,
   logger: Logger,
 ): Promise<PreparedAsset | null> {
+  if (asset.isCdnAsset) {
+    logger.info?.(
+      `[sync-assets] cdn path accepted ${assetLogId(asset)} key=${asset.key}`,
+    );
+    return { ...asset, uploaded: false };
+  }
+
   if (await r2ObjectExists(asset.key)) {
     logger.info?.(
       `[sync-assets] r2 exists ${assetLogId(asset)} key=${asset.key}`,
@@ -244,17 +264,21 @@ async function applyBatchUpdates(assets: PreparedAsset[], logger: Logger) {
   const operations = assets.map((asset) => {
     if (asset.context === "anime") {
       return prisma.anime.updateMany({
-        where: { id: asset.id, [asset.field]: asset.url },
-        data: { [asset.field]: asset.cdnUrl },
+        where: asset.isCdnAsset
+          ? { id: asset.id }
+          : { id: asset.id, [asset.field]: asset.url },
+        data: { [asset.field]: toImagePath(asset.key) },
       });
     }
 
     return prisma.episode.updateMany({
-      where: {
-        id: asset.id,
-        OR: [{ thumbnail: asset.url }, { thumbnail: null }],
-      },
-      data: { thumbnail: asset.cdnUrl },
+      where: asset.isCdnAsset
+        ? { id: asset.id }
+        : {
+            id: asset.id,
+            OR: [{ thumbnail: asset.url }, { thumbnail: null }],
+          },
+      data: { thumbnail: toImagePath(asset.key) },
     });
   });
 
@@ -265,7 +289,9 @@ async function applyBatchUpdates(assets: PreparedAsset[], logger: Logger) {
 
   if (changedCount > 0) {
     await CacheInvalidator.onBulkAnimeChange().catch((error) =>
-      logger.warn?.(`[sync-assets] cache invalidate bulk failed: ${String(error)}`),
+      logger.warn?.(
+        `[sync-assets] cache invalidate bulk failed: ${String(error)}`,
+      ),
     );
   }
 
@@ -303,7 +329,10 @@ export function enqueueAssetSync(rawAssets: SyncAssetInput[], logger: Logger) {
     try {
       const asset = parseAsset(raw);
       if (!asset || isRecentlyProcessed(asset)) continue;
-      unique.set(`${asset.context}:${asset.id}:${asset.field}:${asset.url}`, asset);
+      unique.set(
+        `${asset.context}:${asset.id}:${asset.field}:${asset.url}`,
+        asset,
+      );
     } catch {
       continue;
     }

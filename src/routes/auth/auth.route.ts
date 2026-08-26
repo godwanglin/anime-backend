@@ -38,6 +38,7 @@ import {
   type ProfileStatsDTO,
 } from "../../services/user-profile.service";
 import { deleteR2Object, uploadBufferToR2 } from "../../utils/r2";
+import { toImagePath } from "../../utils/image-path";
 import { badRequest, conflict, unauthorized } from "../../utils/http-error";
 import { created, ok } from "../../utils/response";
 
@@ -195,6 +196,11 @@ function validateAvatarFile(file: {
 
 function avatarKeyFromUrl(url: string | null | undefined) {
   if (!url) return null;
+
+  const raw = url.trim().replace(/^\/+/, "");
+  if (raw.startsWith(AVATAR_PREFIX) && !raw.includes("..")) {
+    return raw;
+  }
 
   try {
     const parsed = new URL(url);
@@ -693,7 +699,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       try {
         user = await prisma.user.update({
           where: { id: request.user.id },
-          data: { avatar: uploaded.url },
+          data: { avatar: toImagePath(uploaded.key) },
           select: {
             id: true,
             email: true,

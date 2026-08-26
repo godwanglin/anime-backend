@@ -43,6 +43,7 @@ func (a *app) ydwnCaptions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid or missing YouTube URL", http.StatusBadRequest)
 		return
 	}
+	rawURL = normalizeYouTubeURL(rawURL)
 	videoID := extractYouTubeID(rawURL)
 	if videoID == "" {
 		http.Error(w, "cannot extract YouTube video id", http.StatusBadRequest)
@@ -90,6 +91,7 @@ func (a *app) ydwnPlaylist(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid or missing YouTube URL", http.StatusBadRequest)
 		return
 	}
+	rawURL = normalizeYouTubeURL(rawURL)
 	setCaptionPot(extractYouTubeID(rawURL), r.URL.Query().Get("pot"))
 	items, err := a.fetchYdwnItems(r.Context(), rawURL)
 	if err != nil {

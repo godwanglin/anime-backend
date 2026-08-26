@@ -23,7 +23,8 @@ var (
 	ydwnCaptionCache = map[string]timedCacheEntry{}
 	ydwnPotMu        sync.RWMutex
 	ydwnPotByVideo   = map[string]string{}
-	youtubeIDPattern = regexp.MustCompile(`(?:youtube\.com/watch\?(?:.*&)?v=|youtu\.be/)([a-zA-Z0-9_-]{11})`)
+	youtubeIDPattern = regexp.MustCompile(`(?:youtube\.com/watch\?(?:.*&)?v=|youtu\.be/|youtube\.com/shorts/)([a-zA-Z0-9_-]{11})`)
+	youtubeRawIDPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]{11}$`)
 )
 
 func encodeYdwnToken(value string) string {
@@ -44,7 +45,19 @@ func decodeYdwnToken(token string) (string, error) {
 }
 
 func isYouTubeURL(value string) bool {
-	return strings.Contains(value, "youtube.com/watch") || strings.Contains(value, "youtu.be/")
+	value = strings.TrimSpace(value)
+	return youtubeRawIDPattern.MatchString(value) ||
+		strings.Contains(value, "youtube.com/watch") ||
+		strings.Contains(value, "youtube.com/shorts/") ||
+		strings.Contains(value, "youtu.be/")
+}
+
+func normalizeYouTubeURL(value string) string {
+	value = strings.TrimSpace(value)
+	if youtubeRawIDPattern.MatchString(value) {
+		return "https://www.youtube.com/watch?v=" + value
+	}
+	return value
 }
 
 func extractYouTubeID(value string) string {

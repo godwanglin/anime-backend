@@ -58,7 +58,7 @@ func fetchYtDlpItems(ctx context.Context, youtubeURL string) ([]ydwnMediaItem, e
 		"--skip-download",
 		"--no-warnings",
 		"--force-ipv4",
-		"--extractor-args", "youtube:player_client=android",
+		"--extractor-args", "youtube:player_client=tv_embedded",
 		"--format-sort", "res,fps,br",
 	}
 	args = append(args, ytDlpCookiesArgs()...)
@@ -86,7 +86,7 @@ func fetchYtDlpItems(ctx context.Context, youtubeURL string) ([]ydwnMediaItem, e
 	var audio *ytDlpFormat
 
 	for _, format := range info.Formats {
-		if format.URL == "" || format.Ext != "mp4" {
+		if format.URL == "" || (format.Ext != "mp4" && format.Ext != "m4a") {
 			continue
 		}
 

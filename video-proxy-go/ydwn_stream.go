@@ -161,6 +161,8 @@ func (a *app) ydwnPlaylist(w http.ResponseWriter, r *http.Request) {
 
 	videos := filterYdwnItems(items, "Video")
 	audios := filterYdwnItems(items, "Audio")
+	videos = a.filterPlayableYdwnItems(r.Context(), videos)
+	audios = a.filterPlayableYdwnItems(r.Context(), audios)
 	sort.SliceStable(videos, func(i, j int) bool {
 		return ydwnQualityRank[videos[i].MediaQuality] < ydwnQualityRank[videos[j].MediaQuality]
 	})
@@ -217,6 +219,29 @@ func (a *app) ydwnPlaylist(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 	writeText(w, "application/vnd.apple.mpegurl", "public, max-age=300", strings.Join(lines, "\n"))
+}
+
+func (a *app) filterPlayableYdwnItems(ctx context.Context, items []ydwnMediaItem) []ydwnMediaItem {
+	playable := make([]ydwnMediaItem, 0, len(items))
+	for _, item := range items {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, item.MediaPreviewURL, nil)
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Range", "bytes=0-1023")
+		req.Header.Set("User-Agent", fallbackUserAgent)
+		req.Header.Set("Referer", "https://www.youtube.com/")
+		req.Header.Set("Origin", "https://www.youtube.com")
+		res, err := a.client.Do(req)
+		if err != nil {
+			continue
+		}
+		res.Body.Close()
+		if res.StatusCode >= 200 && res.StatusCode < 300 {
+			playable = append(playable, item)
+		}
+	}
+	return playable
 }
 
 func (a *app) ydwnMediaPlaylist(w http.ResponseWriter, r *http.Request) {

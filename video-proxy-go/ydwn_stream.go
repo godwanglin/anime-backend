@@ -265,7 +265,7 @@ func (a *app) filterPlayableYdwnItems(ctx context.Context, items []ydwnMediaItem
 }
 
 func limitYdwnVideoCandidates(items []ydwnMediaItem) []ydwnMediaItem {
-	byHeight := map[string]ydwnMediaItem{}
+	byQuality := map[string]ydwnMediaItem{}
 	for _, item := range items {
 		resolution := mediaResolution(item.MediaRes)
 		parts := strings.Split(resolution, "x")
@@ -276,18 +276,21 @@ func limitYdwnVideoCandidates(items []ydwnMediaItem) []ydwnMediaItem {
 		if err != nil || height <= 0 {
 			continue
 		}
-		key := strconv.Itoa(height)
-		current, exists := byHeight[key]
+		if height > 1080 {
+			continue
+		}
+		quality := item.MediaQuality
+		current, exists := byQuality[quality]
 		if !exists || ydwnVideoCandidateScore(item) > ydwnVideoCandidateScore(current) {
-			byHeight[key] = item
+			byQuality[quality] = item
 		}
 	}
-	out := make([]ydwnMediaItem, 0, len(byHeight))
-	for _, item := range byHeight {
+	out := make([]ydwnMediaItem, 0, len(byQuality))
+	for _, item := range byQuality {
 		out = append(out, item)
 	}
 	sort.Slice(out, func(i, j int) bool {
-		return mediaResolution(out[i].MediaRes) < mediaResolution(out[j].MediaRes)
+		return ydwnQualityRank[out[i].MediaQuality] < ydwnQualityRank[out[j].MediaQuality]
 	})
 	return out
 }

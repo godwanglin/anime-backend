@@ -155,7 +155,7 @@ func extractMediaInfo(previewURL string) (int64, float64, bool) {
 	}
 	clen, err := strconv.ParseInt(parsed.Query().Get("clen"), 10, 64)
 	if err != nil || clen <= 0 {
-		return 0, 0, false
+		clen = 0
 	}
 	dur, err := strconv.ParseFloat(parsed.Query().Get("dur"), 64)
 	if err != nil || dur <= 0 {

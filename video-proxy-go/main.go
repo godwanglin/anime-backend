@@ -224,6 +224,8 @@ func upstreamIdentity(r *http.Request, target *url.URL) (string, string) {
 
 	host := target.Hostname()
 	switch {
+	case strings.Contains(host, "googlevideo.com"):
+		return "https://www.youtube.com/", "https://www.youtube.com"
 	case strings.Contains(host, "dailymotion.com") || strings.Contains(host, "dmcdn.net"):
 		return "https://www.dailymotion.com/", "https://www.dailymotion.com"
 	case strings.Contains(host, "ok.ru") || strings.Contains(host, "mycdn.me") || strings.Contains(host, "vkuser.net"):

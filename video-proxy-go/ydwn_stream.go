@@ -312,6 +312,9 @@ func (a *app) fetchYdwnItems(ctx context.Context, youtubeURL string) ([]ydwnMedi
 	if payload.API.Status != "ok" {
 		return fetchYtDlpItems(ctx, youtubeURL)
 	}
+	if len(payload.API.MediaItems) == 0 {
+		return fetchYtDlpItems(ctx, youtubeURL)
+	}
 	return payload.API.MediaItems, nil
 }
 

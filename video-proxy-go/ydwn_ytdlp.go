@@ -98,6 +98,11 @@ func fetchYtDlpItems(ctx context.Context, youtubeURL string) ([]ydwnMediaItem, e
 			continue
 		}
 
+		if hasVideo && !hasAudio && format.Height > 0 {
+			items = append(items, ytDlpVideoItem(format, info.Duration))
+			continue
+		}
+
 		if hasAudio && !hasVideo && (audio == nil || format.Bitrate > audio.Bitrate) {
 			current := format
 			audio = &current

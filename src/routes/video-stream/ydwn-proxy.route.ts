@@ -34,6 +34,14 @@ function streamingPublicURL() {
   }
 }
 
+function publicForwardedHost(req: { headers: Record<string, string | string[] | undefined>; hostname: string }) {
+  const forwardedHost = req.headers["x-forwarded-host"];
+  if (typeof forwardedHost === "string") return forwardedHost.split(",")[0].trim();
+  if (Array.isArray(forwardedHost) && forwardedHost[0]) return forwardedHost[0];
+  if (typeof req.headers.host === "string") return req.headers.host;
+  return streamingPublicURL()?.host ?? req.hostname;
+}
+
 function copyResponseHeaders(source: Headers, reply: FastifyReply) {
   source.forEach((value, key) => {
     if (!HOP_BY_HOP_HEADERS.has(key.toLowerCase())) {
@@ -82,8 +90,8 @@ export const ydwnProxyRoutes: FastifyPluginAsync = async (app) => {
             Accept: headerValue(req.headers.accept, "*/*"),
             "Accept-Language": headerValue(req.headers["accept-language"], "en-US,en;q=0.9"),
             Range: headerValue(req.headers.range),
-            "X-Forwarded-Host": streamingPublicURL()?.host ?? "",
-            "X-Forwarded-Proto": streamingPublicURL()?.protocol.replace(":", "") ?? "https",
+            "X-Forwarded-Host": publicForwardedHost(req),
+            "X-Forwarded-Proto": "https",
           },
         });
       } catch (err) {

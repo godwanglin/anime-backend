@@ -11,7 +11,13 @@ import (
 func buildYdwnMediaPlaylist(r *http.Request, meta streamMeta) string {
 	segURL := ydwnBaseURL(r) + "/segment?t=" + meta.Token
 	lines := []string{"#EXTM3U", "#EXT-X-VERSION:6", "#EXT-X-PLAYLIST-TYPE:VOD"}
-	if len(meta.SidxEntries) > 0 && meta.Timescale > 0 {
+	if meta.Progressive {
+		lines = append(lines,
+			"#EXT-X-TARGETDURATION:"+strconv.Itoa(int(math.Ceil(meta.Dur))),
+			"#EXTINF:"+strconv.FormatFloat(meta.Dur, 'f', 3, 64)+",",
+			segURL,
+		)
+	} else if len(meta.SidxEntries) > 0 && meta.Timescale > 0 {
 		groups := groupSidxEntries(meta)
 		lines = append(lines,
 			"#EXT-X-TARGETDURATION:"+strconv.Itoa(int(math.Ceil(ydwnTargetSegSec*1.5))),

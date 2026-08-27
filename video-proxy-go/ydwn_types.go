@@ -41,6 +41,7 @@ type streamMeta struct {
 	FirstMoofOffset int64
 	Timescale       uint32
 	SidxEntries     []sidxEntry
+	Progressive     bool
 	Expiry          time.Time
 }
 

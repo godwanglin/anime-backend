@@ -333,7 +333,9 @@ func (a *app) buildYdwnMeta(ctx context.Context, previewURL string) (streamMeta,
 	}
 	parsed, err := a.parseFmp4Header(ctx, previewURL)
 	if err != nil {
-		return streamMeta{}, err
+		parsed = streamMeta{
+			Progressive: true,
+		}
 	}
 	parsed.Token = token
 	parsed.Clen = clen

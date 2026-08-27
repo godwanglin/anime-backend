@@ -299,18 +299,18 @@ func (a *app) fetchYdwnItems(ctx context.Context, youtubeURL string) ([]ydwnMedi
 
 	res, err := a.client.Do(req)
 	if err != nil {
-		return nil, err
+		return fetchYtDlpItems(ctx, youtubeURL)
 	}
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return nil, errors.New("ytdown.to returned " + strconv.Itoa(res.StatusCode))
+		return fetchYtDlpItems(ctx, youtubeURL)
 	}
 	var payload ydwnAPIResponse
 	if json.NewDecoder(res.Body).Decode(&payload) != nil {
-		return nil, errors.New("invalid ytdown.to response")
+		return fetchYtDlpItems(ctx, youtubeURL)
 	}
 	if payload.API.Status != "ok" {
-		return nil, errors.New(firstNonEmpty(payload.API.Message, "ytdown.to non-ok"))
+		return fetchYtDlpItems(ctx, youtubeURL)
 	}
 	return payload.API.MediaItems, nil
 }

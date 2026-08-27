@@ -181,18 +181,13 @@ func (a *app) ydwnPlaylist(w http.ResponseWriter, r *http.Request) {
 	videoMetas := make([]*streamMeta, len(videos))
 	for i := range videos {
 		if meta, err := a.buildYdwnMeta(r.Context(), videos[i].MediaPreviewURL); err == nil {
-			if meta.Progressive {
-				continue
-			}
 			videoMetas[i] = &meta
 		}
 	}
 	var audioMeta *streamMeta
 	if audio != nil {
 		if meta, err := a.buildYdwnMeta(r.Context(), audio.MediaPreviewURL); err == nil {
-			if !meta.Progressive {
-				audioMeta = &meta
-			}
+			audioMeta = &meta
 		}
 	}
 

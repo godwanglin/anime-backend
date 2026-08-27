@@ -58,7 +58,7 @@ func fetchYtDlpItems(ctx context.Context, youtubeURL string) ([]ydwnMediaItem, e
 		"--skip-download",
 		"--no-warnings",
 		"--force-ipv4",
-		"--extractor-args", "youtube:player_client=android",
+		"--extractor-args", "youtube:player_client=all",
 		"--format-sort", "res,fps,br",
 	}
 	args = append(args, ytDlpCookiesArgs()...)

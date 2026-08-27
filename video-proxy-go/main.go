@@ -71,7 +71,7 @@ func newApp() *app {
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		DisableCompression:    true,
-		ForceAttemptHTTP2:     false,
+		ForceAttemptHTTP2:     true,
 	}
 
 	return &app{
@@ -371,7 +371,8 @@ func baseProxyURL(r *http.Request) string {
 
 func streamResponse(w http.ResponseWriter, upstream *http.Response, contentType string) {
 	writeBinaryHeaders(w, upstream, contentType, upstream.StatusCode)
-	_, _ = io.Copy(w, upstream.Body)
+	buffer := make([]byte, 128*1024)
+	_, _ = io.CopyBuffer(w, upstream.Body, buffer)
 }
 
 func writeBinaryHeaders(w http.ResponseWriter, upstream *http.Response, contentType string, status int) {

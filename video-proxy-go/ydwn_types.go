@@ -7,7 +7,7 @@ const (
 	ydwnBasePath     = "/api/video-stream/ydwn-proxy"
 	ydwnCacheTTL     = 4 * time.Hour
 	ydwnCaptionTTL   = time.Hour
-	ydwnTargetSegSec = 6
+	ydwnTargetSegSec = 4
 )
 
 type ydwnMediaItem struct {

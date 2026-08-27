@@ -234,6 +234,8 @@ func (a *app) ydwnSegment(w http.ResponseWriter, r *http.Request) {
 		copyError(w, upstream)
 		return
 	}
+	upstream.Header.Set("Cache-Control", "no-store")
+	upstream.Header.Set("CDN-Cache-Control", "no-store")
 	streamResponse(w, upstream, firstNonEmpty(upstream.Header.Get("Content-Type"), "video/mp4"))
 }
 

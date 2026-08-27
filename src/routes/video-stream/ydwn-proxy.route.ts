@@ -36,9 +36,24 @@ function streamingPublicURL() {
 
 function publicForwardedHost(req: { headers: Record<string, string | string[] | undefined>; hostname: string }) {
   const forwardedHost = req.headers["x-forwarded-host"];
-  if (typeof forwardedHost === "string") return forwardedHost.split(",")[0].trim();
-  if (Array.isArray(forwardedHost) && forwardedHost[0]) return forwardedHost[0];
-  if (typeof req.headers.host === "string") return req.headers.host;
+  const candidate =
+    typeof forwardedHost === "string"
+      ? forwardedHost.split(",")[0].trim()
+      : Array.isArray(forwardedHost) && forwardedHost[0]
+        ? forwardedHost[0]
+        : typeof req.headers.host === "string"
+          ? req.headers.host
+          : req.hostname;
+
+  if (
+    candidate &&
+    !candidate.startsWith("localhost") &&
+    !candidate.startsWith("127.0.0.1") &&
+    !candidate.startsWith("[::1]")
+  ) {
+    return candidate;
+  }
+
   return streamingPublicURL()?.host ?? req.hostname;
 }
 

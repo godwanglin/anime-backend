@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -161,6 +162,7 @@ func (a *app) ydwnPlaylist(w http.ResponseWriter, r *http.Request) {
 
 	videos := filterYdwnItems(items, "Video")
 	audios := filterYdwnItems(items, "Audio")
+	videos = limitYdwnVideoCandidates(videos)
 	videos = a.filterPlayableYdwnItems(r.Context(), videos)
 	audios = a.filterPlayableYdwnItems(r.Context(), audios)
 	sort.SliceStable(videos, func(i, j int) bool {
@@ -179,11 +181,17 @@ func (a *app) ydwnPlaylist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	videoMetas := make([]*streamMeta, len(videos))
+	var metadataWait sync.WaitGroup
 	for i := range videos {
-		if meta, err := a.buildYdwnMeta(r.Context(), videos[i].MediaPreviewURL); err == nil {
-			videoMetas[i] = &meta
-		}
+		metadataWait.Add(1)
+		go func(index int) {
+			defer metadataWait.Done()
+			if meta, err := a.buildYdwnMeta(r.Context(), videos[index].MediaPreviewURL); err == nil {
+				videoMetas[index] = &meta
+			}
+		}(i)
 	}
+	metadataWait.Wait()
 	var audioMeta *streamMeta
 	if audio != nil {
 		if meta, err := a.buildYdwnMeta(r.Context(), audio.MediaPreviewURL); err == nil {
@@ -222,26 +230,76 @@ func (a *app) ydwnPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) filterPlayableYdwnItems(ctx context.Context, items []ydwnMediaItem) []ydwnMediaItem {
-	playable := make([]ydwnMediaItem, 0, len(items))
-	for _, item := range items {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, item.MediaPreviewURL, nil)
-		if err != nil {
-			continue
-		}
-		req.Header.Set("Range", "bytes=0-1023")
-		req.Header.Set("User-Agent", fallbackUserAgent)
-		req.Header.Set("Referer", "https://www.youtube.com/")
-		req.Header.Set("Origin", "https://www.youtube.com")
-		res, err := a.client.Do(req)
-		if err != nil {
-			continue
-		}
-		res.Body.Close()
-		if res.StatusCode >= 200 && res.StatusCode < 300 {
-			playable = append(playable, item)
+	playable := make([]ydwnMediaItem, len(items))
+	var wait sync.WaitGroup
+	for index, item := range items {
+		wait.Add(1)
+		go func(index int, item ydwnMediaItem) {
+			defer wait.Done()
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, item.MediaPreviewURL, nil)
+			if err != nil {
+				return
+			}
+			req.Header.Set("Range", "bytes=0-1023")
+			req.Header.Set("User-Agent", fallbackUserAgent)
+			req.Header.Set("Referer", "https://www.youtube.com/")
+			req.Header.Set("Origin", "https://www.youtube.com")
+			res, err := a.client.Do(req)
+			if err == nil {
+				res.Body.Close()
+				if res.StatusCode >= 200 && res.StatusCode < 300 {
+					playable[index] = item
+				}
+			}
+		}(index, item)
+	}
+	wait.Wait()
+	compact := make([]ydwnMediaItem, 0, len(items))
+	for _, item := range playable {
+		if item.MediaPreviewURL != "" {
+			compact = append(compact, item)
 		}
 	}
+	playable = compact
 	return playable
+}
+
+func limitYdwnVideoCandidates(items []ydwnMediaItem) []ydwnMediaItem {
+	byHeight := map[string]ydwnMediaItem{}
+	for _, item := range items {
+		resolution := mediaResolution(item.MediaRes)
+		parts := strings.Split(resolution, "x")
+		if len(parts) != 2 {
+			continue
+		}
+		height, err := strconv.Atoi(parts[1])
+		if err != nil || height <= 0 {
+			continue
+		}
+		key := strconv.Itoa(height)
+		current, exists := byHeight[key]
+		if !exists || ydwnVideoCandidateScore(item) > ydwnVideoCandidateScore(current) {
+			byHeight[key] = item
+		}
+	}
+	out := make([]ydwnMediaItem, 0, len(byHeight))
+	for _, item := range byHeight {
+		out = append(out, item)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return mediaResolution(out[i].MediaRes) < mediaResolution(out[j].MediaRes)
+	})
+	return out
+}
+
+func ydwnVideoCandidateScore(item ydwnMediaItem) int {
+	resolution := mediaResolution(item.MediaRes)
+	parts := strings.Split(resolution, "x")
+	if len(parts) != 2 {
+		return 0
+	}
+	height, _ := strconv.Atoi(parts[1])
+	return height
 }
 
 func (a *app) ydwnMediaPlaylist(w http.ResponseWriter, r *http.Request) {

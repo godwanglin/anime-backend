@@ -180,6 +180,13 @@ func ydwnBaseURL(r *http.Request) string {
 		strings.HasPrefix(cleanHost, "[::1]")
 	if !isLocal {
 		scheme = "https"
+	} else {
+		host = firstNonEmpty(
+			os.Getenv("STREAMING_PUBLIC_HOST"),
+			os.Getenv("PUBLIC_BASE_HOST"),
+			"s1-eth0x01.weebinhub.com",
+		)
+		scheme = "https"
 	}
 
 	return fmt.Sprintf("%s://%s%s", scheme, host, ydwnBasePath)

@@ -218,7 +218,7 @@ func (a *app) ydwnPlaylist(w http.ResponseWriter, r *http.Request) {
 			base+"/media-playlist?t="+meta.Token,
 		)
 	}
-	writeText(w, "application/vnd.apple.mpegurl", "public, max-age=300", strings.Join(lines, "\n"))
+	writeText(w, "application/vnd.apple.mpegurl", "no-store", strings.Join(lines, "\n"))
 }
 
 func (a *app) filterPlayableYdwnItems(ctx context.Context, items []ydwnMediaItem) []ydwnMediaItem {
@@ -263,7 +263,7 @@ func (a *app) ydwnMediaPlaylist(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	writeText(w, "application/vnd.apple.mpegurl", "public, max-age=3600", buildYdwnMediaPlaylist(r, meta))
+	writeText(w, "application/vnd.apple.mpegurl", "no-store", buildYdwnMediaPlaylist(r, meta))
 }
 
 func (a *app) ydwnSubtitlePlaylist(w http.ResponseWriter, r *http.Request) {

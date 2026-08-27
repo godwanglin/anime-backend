@@ -55,6 +55,14 @@ func (a *app) ydwnDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no playable YouTube video", http.StatusBadGateway)
 		return
 	}
+	if quality := r.URL.Query().Get("quality"); quality != "" {
+		requestedHeight, _ := strconv.Atoi(strings.TrimSuffix(strings.ToLower(quality), "p"))
+		if requestedHeight > 0 {
+			sort.SliceStable(videos, func(i, j int) bool {
+				return qualityDistance(videos[i].MediaRes, requestedHeight) < qualityDistance(videos[j].MediaRes, requestedHeight)
+			})
+		}
+	}
 	upstream, err := a.fetchUpstream(r.Context(), r, videos[0].MediaPreviewURL)
 	if err != nil {
 		http.Error(w, "upstream request failed", http.StatusBadGateway)
@@ -67,6 +75,26 @@ func (a *app) ydwnDirect(w http.ResponseWriter, r *http.Request) {
 	}
 	upstream.Header.Set("Cache-Control", "no-store")
 	streamResponse(w, upstream, "video/mp4")
+}
+
+func qualityDistance(value interface{}, requestedHeight int) int {
+	resolution, ok := value.(string)
+	if !ok {
+		return 1_000_000
+	}
+	parts := strings.Split(resolution, "x")
+	if len(parts) != 2 {
+		return 1_000_000
+	}
+	height, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 1_000_000
+	}
+	distance := height - requestedHeight
+	if distance < 0 {
+		distance = -distance
+	}
+	return distance
 }
 
 func (a *app) ydwnCaptions(w http.ResponseWriter, r *http.Request) {

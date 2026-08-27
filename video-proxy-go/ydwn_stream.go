@@ -32,9 +32,41 @@ func (a *app) serveYdwn(w http.ResponseWriter, r *http.Request) {
 		a.ydwnSubtitleVTT(w, r)
 	case "/segment":
 		a.ydwnSegment(w, r)
+	case "/direct.mp4":
+		a.ydwnDirect(w, r)
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+func (a *app) ydwnDirect(w http.ResponseWriter, r *http.Request) {
+	youtubeURL := normalizeYouTubeURL(r.URL.Query().Get("url"))
+	if youtubeURL == "" || !isYouTubeURL(youtubeURL) {
+		http.Error(w, "invalid or missing YouTube URL", http.StatusBadRequest)
+		return
+	}
+	items, err := fetchYtDlpItems(r.Context(), youtubeURL)
+	if err != nil {
+		http.Error(w, "failed to resolve YouTube video", http.StatusBadGateway)
+		return
+	}
+	videos := filterYdwnItems(items, "Video")
+	if len(videos) == 0 {
+		http.Error(w, "no playable YouTube video", http.StatusBadGateway)
+		return
+	}
+	upstream, err := a.fetchUpstream(r.Context(), r, videos[0].MediaPreviewURL)
+	if err != nil {
+		http.Error(w, "upstream request failed", http.StatusBadGateway)
+		return
+	}
+	defer upstream.Body.Close()
+	if upstream.StatusCode < 200 || upstream.StatusCode >= 300 {
+		copyError(w, upstream)
+		return
+	}
+	upstream.Header.Set("Cache-Control", "no-store")
+	streamResponse(w, upstream, "video/mp4")
 }
 
 func (a *app) ydwnCaptions(w http.ResponseWriter, r *http.Request) {

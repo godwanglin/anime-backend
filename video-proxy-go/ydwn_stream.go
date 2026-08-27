@@ -286,6 +286,10 @@ func firstCaptionURLCandidate(rawURL string, pots []string) string {
 }
 
 func (a *app) fetchYdwnItems(ctx context.Context, youtubeURL string) ([]ydwnMediaItem, error) {
+	if items, err := fetchYtDlpItems(ctx, youtubeURL); err == nil && len(items) > 0 {
+		return items, nil
+	}
+
 	body := url.Values{"url": {youtubeURL}}.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ydwnProxyURL, strings.NewReader(body))
 	if err != nil {

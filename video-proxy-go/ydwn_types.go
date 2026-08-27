@@ -57,3 +57,8 @@ type timedCacheEntry struct {
 	Content string
 	Expiry  time.Time
 }
+
+type timedItemsEntry struct {
+	Items  []ydwnMediaItem
+	Expiry time.Time
+}

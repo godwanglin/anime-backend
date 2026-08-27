@@ -17,6 +17,8 @@ import (
 )
 
 var (
+	ydwnItemsMu      sync.RWMutex
+	ydwnItemsCache   = map[string]timedItemsEntry{}
 	ydwnMetaMu       sync.RWMutex
 	ydwnMetaCache    = map[string]streamMeta{}
 	ydwnCaptionMu    sync.RWMutex

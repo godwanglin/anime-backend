@@ -431,7 +431,22 @@ func firstCaptionURLCandidate(rawURL string, pots []string) string {
 }
 
 func (a *app) fetchYdwnItems(ctx context.Context, youtubeURL string) ([]ydwnMediaItem, error) {
+	videoID := extractYouTubeID(youtubeURL)
+	if videoID != "" {
+		ydwnItemsMu.RLock()
+		cached, ok := ydwnItemsCache[videoID]
+		ydwnItemsMu.RUnlock()
+		if ok && time.Now().Before(cached.Expiry) && len(cached.Items) > 0 {
+			return cached.Items, nil
+		}
+	}
+
 	if items, err := fetchYtDlpItems(ctx, youtubeURL); err == nil && len(items) > 0 {
+		if videoID != "" {
+			ydwnItemsMu.Lock()
+			ydwnItemsCache[videoID] = timedItemsEntry{Items: items, Expiry: time.Now().Add(ydwnCacheTTL)}
+			ydwnItemsMu.Unlock()
+		}
 		return items, nil
 	}
 

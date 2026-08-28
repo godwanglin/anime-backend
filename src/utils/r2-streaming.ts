@@ -11,6 +11,8 @@ const DEFAULT_BUCKET = "weebin-storage";
 
 type VideoS3Config = {
   endpoint: string;
+  region: string;
+  forcePathStyle: boolean;
   accessKeyId: string;
   secretAccessKey: string;
   bucket: string;
@@ -44,11 +46,19 @@ function requiredEnv(name: string) {
   return value;
 }
 
+function booleanEnv(name: string, fallback: boolean) {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (!value) return fallback;
+  return value === "true" || value === "1" || value === "yes";
+}
+
 function getStreamingConfig(): VideoS3Config {
   if (cachedConfig) return cachedConfig;
 
   cachedConfig = {
     endpoint: requiredEnv("VIDEO_S3_ENDPOINT"),
+    region: process.env.VIDEO_S3_REGION?.trim() || "us-east-1",
+    forcePathStyle: booleanEnv("VIDEO_S3_FORCE_PATH_STYLE", true),
     accessKeyId: requiredEnv("VIDEO_S3_ACCESS_KEY_ID"),
     secretAccessKey: requiredEnv("VIDEO_S3_SECRET_ACCESS_KEY"),
     bucket: process.env.VIDEO_S3_BUCKET?.trim() || DEFAULT_BUCKET,
@@ -63,13 +73,13 @@ function getStreamingClient(): S3Client {
 
   const config = getStreamingConfig();
   client = new S3Client({
-    region: "auto",
+    region: config.region,
     endpoint: config.endpoint,
     credentials: {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
     },
-    forcePathStyle: true,
+    forcePathStyle: config.forcePathStyle,
   });
 
   return client;

@@ -7,9 +7,9 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 
-const DEFAULT_BUCKET = "video-storage";
+const DEFAULT_BUCKET = "weebin-storage";
 
-type R2StreamingConfig = {
+type VideoS3Config = {
   endpoint: string;
   accessKeyId: string;
   secretAccessKey: string;
@@ -36,7 +36,7 @@ export type StreamingVideoListResult = {
 };
 
 let client: S3Client | null = null;
-let cachedConfig: R2StreamingConfig | null = null;
+let cachedConfig: VideoS3Config | null = null;
 
 function requiredEnv(name: string) {
   const value = process.env[name]?.trim();
@@ -44,15 +44,15 @@ function requiredEnv(name: string) {
   return value;
 }
 
-function getStreamingConfig(): R2StreamingConfig {
+function getStreamingConfig(): VideoS3Config {
   if (cachedConfig) return cachedConfig;
 
   cachedConfig = {
-    endpoint: requiredEnv("R2_ENDPOINT"),
-    accessKeyId: requiredEnv("R2_ACCESS_KEY_ID"),
-    secretAccessKey: requiredEnv("R2_SECRET_ACCESS_KEY"),
-    bucket: process.env.R2_BUCKET_STREAMING?.trim() || DEFAULT_BUCKET,
-    publicUrl: requiredEnv("R2_STREAMING_URL"),
+    endpoint: requiredEnv("VIDEO_S3_ENDPOINT"),
+    accessKeyId: requiredEnv("VIDEO_S3_ACCESS_KEY_ID"),
+    secretAccessKey: requiredEnv("VIDEO_S3_SECRET_ACCESS_KEY"),
+    bucket: process.env.VIDEO_S3_BUCKET?.trim() || DEFAULT_BUCKET,
+    publicUrl: requiredEnv("VIDEO_S3_PUBLIC_URL"),
   };
 
   return cachedConfig;

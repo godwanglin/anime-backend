@@ -6,7 +6,7 @@ import { VIDEO_SEGMENT_CACHE_CONTROL } from "../../utils/video-stream-cache";
 const FALLBACK_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
 const SOKUJA_REFERER = "https://x5.sokuja.uk/";
-const DEFAULT_SKJ_PROXY_BASE_URL = "https://vod-blgr-0x03.weebin.site";
+const DEFAULT_SKJ_PROXY_BASE_URL = "https://vod-blgr-0x03.weebinhub.com";
 const FORWARDED_HEADERS = [
   "content-type",
   "content-length",
@@ -35,7 +35,8 @@ function isAllowedSokujaUrl(value: string) {
     const url = new URL(value);
     return (
       url.protocol === "https:" &&
-      (url.hostname === "storages.sokuja.id" || url.hostname.endsWith(".sokuja.id"))
+      (url.hostname === "storages.sokuja.id" ||
+        url.hostname.endsWith(".sokuja.id"))
     );
   } catch {
     return false;
@@ -84,7 +85,11 @@ function shouldRedirectToSokujaProxy(status: number) {
 }
 
 export const skjRoutes: FastifyPluginAsync = async (app) => {
-  async function streamSokuja(request: any, reply: any, method: "GET" | "HEAD") {
+  async function streamSokuja(
+    request: any,
+    reply: any,
+    method: "GET" | "HEAD",
+  ) {
     const params = request.params as { "*": string };
     const hexUrl = params["*"];
     const targetUrl = hexUrl ? decodeHexUrl(hexUrl) : null;
@@ -124,7 +129,10 @@ export const skjRoutes: FastifyPluginAsync = async (app) => {
         const value = upstream.headers.get(headerName);
         if (value) reply.header(headerName, value);
       }
-      reply.header("accept-ranges", upstream.headers.get("accept-ranges") ?? "bytes");
+      reply.header(
+        "accept-ranges",
+        upstream.headers.get("accept-ranges") ?? "bytes",
+      );
       reply.header("cache-control", VIDEO_SEGMENT_CACHE_CONTROL);
 
       if (method === "HEAD") return reply.send();

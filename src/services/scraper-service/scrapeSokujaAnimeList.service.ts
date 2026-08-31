@@ -7,7 +7,7 @@ import type {
 } from "./types";
 
 const SOKUJA_ORIGIN = "https://x5.sokuja.uk";
-const DEFAULT_SKJ_PROXY_BASE_URL = "https://vod-blgr-0x03.weebin.site";
+const DEFAULT_SKJ_PROXY_BASE_URL = "https://vod-blgr-0x03.weebinhub.com";
 const DEFAULT_PAGE_SIZE = 24;
 
 export type SokujaAnimeCard = {
@@ -172,15 +172,24 @@ function parseInfoMetadata($: cheerio.CheerioAPI): AnimeMetadata {
     .filter((_, element) => /informasi anime/i.test($(element).text()))
     .first();
 
-  infoHeading.parent().find("dl > div").each((_, element) => {
-    const label = $(element).find("dt").first().text().trim();
-    const value = $(element).find("dd").first().text().replace(/\s+/g, " ").trim();
-    const key = normalizeMetadataKey(label);
+  infoHeading
+    .parent()
+    .find("dl > div")
+    .each((_, element) => {
+      const label = $(element).find("dt").first().text().trim();
+      const value = $(element)
+        .find("dd")
+        .first()
+        .text()
+        .replace(/\s+/g, " ")
+        .trim();
+      const key = normalizeMetadataKey(label);
 
-    if (key && value) {
-      metadata[key] = key === "type" ? normalizeType(value) ?? value : value;
-    }
-  });
+      if (key && value) {
+        metadata[key] =
+          key === "type" ? (normalizeType(value) ?? value) : value;
+      }
+    });
 
   return metadata;
 }
@@ -200,7 +209,8 @@ function parseSynopsis($: cheerio.CheerioAPI) {
 }
 
 function parseDetailImages($: cheerio.CheerioAPI, fallback: string | null) {
-  const poster = normalizeImageUrl($("main img").first().attr("src")) ?? fallback;
+  const poster =
+    normalizeImageUrl($("main img").first().attr("src")) ?? fallback;
   const gallery = $("h2")
     .filter((_, element) => /galeri/i.test($(element).text()))
     .first()
@@ -241,21 +251,35 @@ function parseEpisodeNumber(text: string, href: string | null) {
   if (slugMatch) return slugMatch[1];
 
   const source = text.replace(/\s+/g, " ").trim();
-  const match = source.match(/\bepisode\s+(\d{1,4})\b/i) ?? source.match(/\bep\s*(\d{1,4})\b/i);
+  const match =
+    source.match(/\bepisode\s+(\d{1,4})\b/i) ??
+    source.match(/\bep\s*(\d{1,4})\b/i);
   return match?.[1] ?? "0";
 }
 
-function parseEpisodeDate($: cheerio.CheerioAPI, element: Parameters<typeof $>[0]) {
-  const directDate = $(element).find("span.text-xs").first().text().replace(/\s+/g, " ").trim();
+function parseEpisodeDate(
+  $: cheerio.CheerioAPI,
+  element: Parameters<typeof $>[0],
+) {
+  const directDate = $(element)
+    .find("span.text-xs")
+    .first()
+    .text()
+    .replace(/\s+/g, " ")
+    .trim();
   if (directDate) return directDate;
 
   const text = $(element).text().replace(/\s+/g, " ").trim();
   return (
-    text.match(/(\d+\s+(?:menit|jam|hari|minggu|bulan|tahun)\s+lalu)$/i)?.[1] ?? ""
+    text.match(/(\d+\s+(?:menit|jam|hari|minggu|bulan|tahun)\s+lalu)$/i)?.[1] ??
+    ""
   );
 }
 
-function parseEpisodes($: cheerio.CheerioAPI, animeSlug: string): AnimeEpisode[] {
+function parseEpisodes(
+  $: cheerio.CheerioAPI,
+  animeSlug: string,
+): AnimeEpisode[] {
   const animeBaseSlug = extractAnimeBaseSlug(animeSlug);
   const seen = new Set<string>();
 
@@ -267,7 +291,8 @@ function parseEpisodes($: cheerio.CheerioAPI, animeSlug: string): AnimeEpisode[]
 
       const absoluteHref = new URL(href, SOKUJA_ORIGIN).href;
       const episodeSlug = extractPathSlug(absoluteHref);
-      if (!episodeSlug.includes(animeBaseSlug) || seen.has(absoluteHref)) return null;
+      if (!episodeSlug.includes(animeBaseSlug) || seen.has(absoluteHref))
+        return null;
 
       const number = parseEpisodeNumber(anchor.text(), href);
       if (number === "0") return null;
@@ -288,23 +313,30 @@ function parseEpisodes($: cheerio.CheerioAPI, animeSlug: string): AnimeEpisode[]
 }
 
 function parseEpisodeSourceId(html: string) {
-  const match = html.match(/\\"episodeId\\":(\d+)/) ?? html.match(/"episodeId":(\d+)/);
+  const match =
+    html.match(/\\"episodeId\\":(\d+)/) ?? html.match(/"episodeId":(\d+)/);
   if (!match) return null;
 
   const sourceId = Number.parseInt(match[1], 10);
   return Number.isFinite(sourceId) ? sourceId : null;
 }
 
-export async function fetchSokujaEpisodeMirrors(episodeId: number, referer: string) {
-  const response = await fetch(`${SOKUJA_ORIGIN}/api/video-mirrors/?e=${episodeId}`, {
-    headers: {
-      Accept: "application/json,text/plain,*/*",
-      "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-      Referer: referer,
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+export async function fetchSokujaEpisodeMirrors(
+  episodeId: number,
+  referer: string,
+) {
+  const response = await fetch(
+    `${SOKUJA_ORIGIN}/api/video-mirrors/?e=${episodeId}`,
+    {
+      headers: {
+        Accept: "application/json,text/plain,*/*",
+        "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        Referer: referer,
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+      },
     },
-  });
+  );
 
   const payload =
     response.ok || !shouldUseSokujaProxyFallback(response.status)
@@ -370,7 +402,9 @@ function mirrorPayloadToServers(payload: {
     .filter((server) => Boolean(server.value));
 }
 
-async function enrichEpisodeWithServers(episode: AnimeEpisode): Promise<AnimeEpisode> {
+async function enrichEpisodeWithServers(
+  episode: AnimeEpisode,
+): Promise<AnimeEpisode> {
   if (!episode.href) return episode;
 
   let html: string;
@@ -386,7 +420,8 @@ async function enrichEpisodeWithServers(episode: AnimeEpisode): Promise<AnimeEpi
   const $ = cheerio.load(html);
   const episodeId = parseEpisodeSourceId(html);
   const thumbnail =
-    normalizeImageUrl($('meta[property="og:image"]').attr("content")) ?? episode.thumbnail;
+    normalizeImageUrl($('meta[property="og:image"]').attr("content")) ??
+    episode.thumbnail;
   const date =
     $(".flex.flex-wrap.items-center.gap-3.text-xs.text-gray-400 span")
       .eq(1)
@@ -435,7 +470,8 @@ export async function scrapeSokujaAnimeDetail(
 ): Promise<AnimeDetail> {
   const html = await fetchDetailPage(card.detailUrl);
   const $ = cheerio.load(html);
-  const title = normalizeDetailTitle($("h1").first().text().trim()) || card.title;
+  const title =
+    normalizeDetailTitle($("h1").first().text().trim()) || card.title;
   const metadata = parseInfoMetadata($);
   const { poster, gallery } = parseDetailImages($, card.thumbnail);
   const cast = parseTags($, 'a[href^="/cast/"]');
@@ -455,11 +491,16 @@ export async function scrapeSokujaAnimeDetail(
   const scanEpisodes =
     options.episodeMode === "recent"
       ? [...episodes]
-          .sort((left, right) => (Number(right.number) || 0) - (Number(left.number) || 0))
+          .sort(
+            (left, right) =>
+              (Number(right.number) || 0) - (Number(left.number) || 0),
+          )
           .slice(0, Math.max(1, options.episodeLimit ?? 2))
       : episodes;
   const enrichedEpisodes = options.includeEpisodeServers
-    ? await Promise.all(scanEpisodes.map((episode) => enrichEpisodeWithServers(episode)))
+    ? await Promise.all(
+        scanEpisodes.map((episode) => enrichEpisodeWithServers(episode)),
+      )
     : scanEpisodes;
   if (enrichedEpisodes.length && !metadata.episodes) {
     metadata.episodes = String(enrichedEpisodes.length);
@@ -556,7 +597,9 @@ export async function scrapeSokujaAnimePage(
   const pageSize = items.length || DEFAULT_PAGE_SIZE;
 
   const animeDetails = options.includeDetails
-    ? await Promise.all(items.map((item) => scrapeSokujaAnimeDetail(item, options)))
+    ? await Promise.all(
+        items.map((item) => scrapeSokujaAnimeDetail(item, options)),
+      )
     : undefined;
 
   return {
@@ -585,11 +628,14 @@ export async function scrapeSokujaAnimePages(
   }
 
   const items = pageResults.flatMap((result) => result.items);
-  const animeDetails = pageResults.flatMap((result) => result.animeDetails ?? []);
-  const totalFound = pageResults.find((result) => result.totalFound)?.totalFound ?? null;
+  const animeDetails = pageResults.flatMap(
+    (result) => result.animeDetails ?? [],
+  );
+  const totalFound =
+    pageResults.find((result) => result.totalFound)?.totalFound ?? null;
   const estimatedTotalPages =
-    pageResults.find((result) => result.estimatedTotalPages)?.estimatedTotalPages ??
-    null;
+    pageResults.find((result) => result.estimatedTotalPages)
+      ?.estimatedTotalPages ?? null;
 
   return {
     fromPage,

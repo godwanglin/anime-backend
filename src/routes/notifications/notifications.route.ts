@@ -221,6 +221,25 @@ export const notificationRoutes: FastifyPluginAsync = async (app) => {
     return ok(reply, { data: { updated: result.count } });
   });
 
+  app.delete("/:id", { preHandler: app.authenticate }, async (request, reply) => {
+    const id = Number((request.params as { id: string }).id);
+    if (!Number.isInteger(id) || id <= 0) throw badRequest("ID notifikasi tidak valid");
+
+    const result = await prisma.notificationRecipient.deleteMany({
+      where: { id, userId: request.user.id },
+    });
+
+    return ok(reply, { data: { deleted: result.count } });
+  });
+
+  app.delete("/", { preHandler: app.authenticate }, async (request, reply) => {
+    const result = await prisma.notificationRecipient.deleteMany({
+      where: { userId: request.user.id },
+    });
+
+    return ok(reply, { data: { deleted: result.count } });
+  });
+
   app.get("/preferences", { preHandler: app.authenticate }, async (request, reply) => {
     const preference = await ensureNotificationPreference(request.user.id);
     return ok(reply, { data: preference });

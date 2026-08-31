@@ -4,7 +4,7 @@ import type { ChatAllowedLink } from "./chat.types";
 const URL_PATTERN =
   /\b(?:https?:\/\/[^\s<>"']+|(?:www\.)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+(?:\/[^\s<>"']*)?)/gi;
 const TRAILING_PUNCTUATION = /[.,!?;:)\]}]+$/;
-const ALLOWED_HOSTS = new Set(["weebin.site", "www.weebin.site"]);
+const ALLOWED_HOSTS = new Set(["weebinhub.com", "www.weebinhub.com"]);
 
 function normalizeUrl(rawText: string) {
   const hasProtocol = /^https?:\/\//i.test(rawText);
@@ -30,9 +30,9 @@ function parseAllowedLink(rawText: string) {
 
     const pathname = parsed.pathname || "/";
     return {
-      url: `https://weebin.site${pathname}${parsed.search}${parsed.hash}`,
+      url: `https://weebinhub.com${pathname}${parsed.search}${parsed.hash}`,
       rawText,
-      host: "weebin.site",
+      host: "weebinhub.com",
       path: `${pathname}${parsed.search}${parsed.hash}`,
     };
   } catch {

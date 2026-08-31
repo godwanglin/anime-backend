@@ -4,7 +4,7 @@ import { getCache, setCache } from "../lib/cache";
 
 const SOKUJA_ORIGIN = "https://x5.sokuja.uk";
 const SOKUJA_SCHEDULE_URL = `${SOKUJA_ORIGIN}/jadwal-rilis-anime/`;
-const DEFAULT_SKJ_PROXY_BASE_URL = "https://vod-blgr-0x03.weebin.site";
+const DEFAULT_SKJ_PROXY_BASE_URL = "https://vod-blgr-0x03.weebinhub.com";
 const SOKUJA_SCHEDULE_CACHE_KEY = "schedule:sokuja:v1";
 const SOKUJA_SCHEDULE_TTL_SECONDS = 20 * 60;
 const SOKUJA_SCHEDULE_REVALIDATE_INTERVAL_MS = 60 * 1000;
@@ -62,7 +62,9 @@ function getJakartaDayIndex(date = new Date()) {
   const dayName = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Jakarta",
     weekday: "short",
-  }).format(date).toLowerCase();
+  })
+    .format(date)
+    .toLowerCase();
 
   return DAY_INDEX[dayName.slice(0, 3)] ?? 0;
 }
@@ -170,7 +172,8 @@ function parseCard(
 
   const detailUrl = new URL(href, SOKUJA_ORIGIN).href;
   const animeSlug = extractSlug(detailUrl);
-  const typeBadge = badges.find((badge) => !/\d{1,2}[:.]\d{2}/.test(badge)) ?? null;
+  const typeBadge =
+    badges.find((badge) => !/\d{1,2}[:.]\d{2}/.test(badge)) ?? null;
 
   return {
     id: -(20_000 + index),
@@ -210,17 +213,14 @@ async function scrapeSokujaSchedule(): Promise<SokujaScheduleItem[]> {
 
   return items.sort(
     (left, right) =>
-      new Date(left.scheduledAt).getTime() - new Date(right.scheduledAt).getTime(),
+      new Date(left.scheduledAt).getTime() -
+      new Date(right.scheduledAt).getTime(),
   );
 }
 
 async function loadFreshSokujaSchedule() {
   const items = await scrapeSokujaSchedule();
-  await setCache(
-    SOKUJA_SCHEDULE_CACHE_KEY,
-    items,
-    SOKUJA_SCHEDULE_TTL_SECONDS,
-  );
+  await setCache(SOKUJA_SCHEDULE_CACHE_KEY, items, SOKUJA_SCHEDULE_TTL_SECONDS);
   return items;
 }
 
@@ -245,7 +245,9 @@ function refreshScheduleCacheInBackground() {
 }
 
 export async function getSokujaSchedule() {
-  const cached = await getCache<SokujaScheduleItem[]>(SOKUJA_SCHEDULE_CACHE_KEY);
+  const cached = await getCache<SokujaScheduleItem[]>(
+    SOKUJA_SCHEDULE_CACHE_KEY,
+  );
   if (cached !== null) {
     refreshScheduleCacheInBackground();
     return cached;

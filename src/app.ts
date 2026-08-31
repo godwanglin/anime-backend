@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import compress from "@fastify/compress";
 import multipart from "@fastify/multipart";
 import { apiRoutes } from "./routes";
 import { syncAssetsRoutes } from "./routes/sync-assets/sync-assets.route";
@@ -15,8 +16,8 @@ import fs from "fs";
 import path from "path";
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  "https://weebin.site",
-  "https://www.weebin.site",
+  "https://weebinhub.com",
+  "https://www.weebinhub.com",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ];
@@ -42,8 +43,8 @@ function isAllowedCorsOrigin(origin: string | undefined) {
       parsed.hostname === "localhost" ||
       parsed.hostname === "127.0.0.1" ||
       parsed.hostname.endsWith(".localhost") ||
-      parsed.hostname === "weebin.site" ||
-      parsed.hostname.endsWith(".weebin.site")
+      parsed.hostname === "weebinhub.com" ||
+      parsed.hostname.endsWith(".weebinhub.com")
     );
   } catch {
     return false;
@@ -68,7 +69,10 @@ export function buildApp() {
   });
 
   app.addHook("onRequest", async (request, reply) => {
-    if (request.method !== "OPTIONS" || !request.url.startsWith("/api/signals")) {
+    if (
+      request.method !== "OPTIONS" ||
+      !request.url.startsWith("/api/signals")
+    ) {
       return;
     }
 
@@ -86,8 +90,24 @@ export function buildApp() {
     },
     credentials: true,
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-guest-watch-id", "Range"],
-    exposedHeaders: ["Accept-Ranges", "Content-Length", "Content-Range", "Content-Type"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-guest-watch-id",
+      "Range",
+    ],
+    exposedHeaders: [
+      "Accept-Ranges",
+      "Content-Length",
+      "Content-Range",
+      "Content-Type",
+    ],
+  });
+
+  app.register(compress, {
+    global: true,
+    encodings: ["br", "gzip", "deflate"],
+    threshold: 1024,
   });
 
   app.register(multipart, {

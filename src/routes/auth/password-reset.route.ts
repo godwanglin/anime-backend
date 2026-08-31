@@ -39,7 +39,7 @@ function appBaseUrl() {
   return (
     process.env.APP_BASE_URL?.trim().replace(/\/+$/, "") ||
     process.env.FRONTEND_BASE_URL?.trim().replace(/\/+$/, "") ||
-    "https://weebin.site"
+    "https://weebinhub.com"
   );
 }
 

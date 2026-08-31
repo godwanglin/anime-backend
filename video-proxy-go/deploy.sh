@@ -8,7 +8,7 @@ APP_PORT="${GO_PROXY_PORT:-8091}"
 cd "$ROOT_DIR"
 
 echo "Syncing backend repo for Go proxy..."
-git remote set-url origin https://github.com/xiaoycailin/anime-backend.git
+git remote set-url origin https://github.com/godwanglin/anime-backend.git
 git fetch origin
 git reset --hard origin/main
 grep -qxF "tmp/" .git/info/exclude || printf "\ntmp/\n" >> .git/info/exclude

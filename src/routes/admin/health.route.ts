@@ -20,7 +20,7 @@ const PM2_ACTIONS = ["start", "stop", "restart"] as const;
 const DEPLOY_TARGETS = ["backend", "frontend", "go-proxy"] as const;
 const GO_PROXY_HEALTH_URL =
   process.env.GO_VIDEO_PROXY_HEALTH_URL ??
-  "https://s1-eth0x01.weebin.site/healthz";
+  "https://s1-eth0x01.weebinhub.com/healthz";
 
 type Pm2ProcessName = (typeof PM2_PROCESS_NAMES)[number];
 type Pm2Action = (typeof PM2_ACTIONS)[number];
@@ -87,7 +87,10 @@ function deployPath(target: DeployTarget) {
 }
 
 function deployLogDir() {
-  return process.env.DEPLOY_LOG_DIR || path.resolve(process.cwd(), "data", "deploy-logs");
+  return (
+    process.env.DEPLOY_LOG_DIR ||
+    path.resolve(process.cwd(), "data", "deploy-logs")
+  );
 }
 
 function deployJobPaths(id: string) {
@@ -485,16 +488,19 @@ const adminHealthRoute: FastifyPluginAsync = async (app) => {
     });
   });
 
-  app.get<{ Params: Pm2LogParams }>("/pm2/logs/:processName", async (request, reply) => {
-    const processName = assertPm2ProcessName(request.params.processName);
-    const logs = await pm2Logs(processName);
-    return ok(reply, {
-      data: {
-        processName,
-        logs,
-      },
-    });
-  });
+  app.get<{ Params: Pm2LogParams }>(
+    "/pm2/logs/:processName",
+    async (request, reply) => {
+      const processName = assertPm2ProcessName(request.params.processName);
+      const logs = await pm2Logs(processName);
+      return ok(reply, {
+        data: {
+          processName,
+          logs,
+        },
+      });
+    },
+  );
 
   app.post<{ Body: DeployBody }>("/deploy", async (request, reply) => {
     const target = assertDeployTarget(request.body ?? {});

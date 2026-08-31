@@ -4,7 +4,7 @@ set -e
 cd /home/www/app-anime/backend-api
 
 echo "Syncing backend with GitHub..."
-git remote set-url origin https://github.com/xiaoycailin/anime-backend.git
+git remote set-url origin https://github.com/godwanglin/anime-backend.git
 git fetch origin
 git reset --hard origin/main
 grep -qxF "tmp/" .git/info/exclude || printf "\ntmp/\n" >> .git/info/exclude

@@ -188,7 +188,7 @@ export async function runSupportAiTriage(input: {
     body: JSON.stringify({
       model: resolveTextModel(),
       response_format: { type: "json_object" },
-      temperature: 0.2,
+      temperature: 1,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

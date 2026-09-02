@@ -158,7 +158,7 @@ async function streamOpenAiAnswer(
     body: JSON.stringify({
       model: resolveTextModel(),
       response_format: { type: "json_object" },
-      temperature: 0.2,
+      temperature: 1,
       stream: true,
       messages: [
         { role: "system", content: input.systemPrompt },

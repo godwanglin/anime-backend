@@ -104,7 +104,7 @@ function serverMatchesVideo(server: LinkedServer, videoId: string) {
   );
 }
 
-export const adminR2VideosRoutes: FastifyPluginAsync = async (app) => {
+export const adminVideoStorageRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", app.adminAuthenticate);
 
   app.get("/", async (request, reply) => {
@@ -128,7 +128,7 @@ export const adminR2VideosRoutes: FastifyPluginAsync = async (app) => {
         : [];
 
     return ok(reply, {
-      message: "R2 video list fetched",
+      message: "Video storage list fetched",
       data: attachLinkedServers(result.items, servers),
       meta: {
         bucket: result.bucket,

@@ -6,6 +6,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 
 const DEFAULT_BUCKET = "weebin-storage";
 
@@ -80,6 +81,11 @@ function getStreamingClient(): S3Client {
       secretAccessKey: config.secretAccessKey,
     },
     forcePathStyle: config.forcePathStyle,
+    requestHandler: new NodeHttpHandler({
+      connectionTimeout: 10_000,
+      requestTimeout: 45_000,
+      socketTimeout: 45_000,
+    }),
   });
 
   return client;
@@ -158,6 +164,7 @@ export async function deleteStreamingObject(key: string) {
 
 async function listKeysByPrefix(prefix: string) {
   const config = getStreamingConfig();
+  const cleanPrefix = prefix.replace(/^\/+/, "");
   const keys: string[] = [];
   let continuationToken: string | undefined;
 
@@ -171,7 +178,7 @@ async function listKeysByPrefix(prefix: string) {
     );
 
     for (const item of response.Contents ?? []) {
-      if (item.Key) keys.push(item.Key);
+      if (item.Key?.startsWith(cleanPrefix)) keys.push(item.Key);
     }
 
     continuationToken = response.IsTruncated
@@ -245,29 +252,23 @@ export async function listStreamingVideos(input: {
 } = {}): Promise<StreamingVideoListResult> {
   const config = getStreamingConfig();
   const limit = Math.min(50, Math.max(1, Math.floor(input.limit ?? 20)));
-
-  const response = await getStreamingClient().send(
-    new ListObjectsV2Command({
-      Bucket: config.bucket,
-      Prefix: "videos/",
-      Delimiter: "/",
-      MaxKeys: limit,
-      ContinuationToken: input.cursor || undefined,
-    }),
-  );
-
+  const keys = await listKeysByPrefix("videos/");
+  const prefixes = Array.from(
+    new Set(
+      keys
+        .map((key) => key.match(/^videos\/([^/]+)\//)?.[0])
+        .filter((prefix): prefix is string => Boolean(prefix)),
+    ),
+  ).sort();
+  const offset = Math.max(0, Number(input.cursor ?? 0) || 0);
+  const pagePrefixes = prefixes.slice(offset, offset + limit);
   const summaries = await Promise.all(
-    (response.CommonPrefixes ?? [])
-      .map((item) => item.Prefix)
-      .filter((prefix): prefix is string => Boolean(prefix))
-      .map((prefix) => summarizeStreamingVideoPrefix(prefix)),
+    pagePrefixes.map((prefix) => summarizeStreamingVideoPrefix(prefix)),
   );
 
   return {
-    items: summaries.filter(
-      (item): item is StreamingVideoSummary => Boolean(item),
-    ),
-    nextCursor: response.NextContinuationToken ?? null,
+    items: summaries.filter((item): item is StreamingVideoSummary => Boolean(item)),
+    nextCursor: offset + limit < prefixes.length ? String(offset + limit) : null,
     bucket: config.bucket,
   };
 }
@@ -277,6 +278,10 @@ export async function deleteStreamingVideo(videoId: string) {
   const cleanVideoId = videoId.trim();
   const prefix = `videos/${cleanVideoId}/`;
   const keys = await listKeysByPrefix(prefix);
+  const invalidKeys = keys.filter((key) => !key.startsWith(prefix));
+  if (invalidKeys.length > 0) {
+    throw new Error("Object storage returned keys outside the requested video prefix");
+  }
 
   for (let i = 0; i < keys.length; i += 1000) {
     const chunk = keys.slice(i, i + 1000);
